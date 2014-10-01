@@ -7,7 +7,7 @@
 //#include <gsl/gsl_math.h>
 #include <gsl/gsl_matrix.h>
 
-//#define NDEBUG 1
+#define NDEBUG 1
 #include "dbg.h"
 
 
