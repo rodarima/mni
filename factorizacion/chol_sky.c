@@ -11,50 +11,104 @@
 #include "dbg.h"
 
 #define ARRAY_SIZE(array) (sizeof (array) / sizeof (array[0]))
+#define max(a,b) \
+	({ __typeof__ (a) _a = (a); \
+	 __typeof__ (b) _b = (b); \
+	 _a > _b ? _a : _b; })
 
-double skyline_matrix_get(gsl_vector *aa, gsl_vector *jd, size_t n, size_t i, size_t j)
+
+double skyline_get(gsl_vector *aa, gsl_vector *jd, size_t i, size_t j)
 {
-	double jd_i = gsl_vector_get(jd, i);
-	debug("jd[%d] = %f\n", i, jd_i);
+	double jd_i;
+	size_t x;
+	double aa_x;
 
+	jd_i = gsl_vector_get(jd, i);
+	//debug("jd[%d] = %f\n", i, jd_i);
+	x = jd_i - i + j;
+	aa_x = gsl_vector_get(aa, x);
+	debug("get(%d,%d) = aa[%d] = %f\n", i, j, x, aa_x);
+
+	return aa_x;
 }
 
-void chol_sky(gsl_vector *aa, gsl_vector *jd, size_t n)
+double skyline_set(gsl_vector *aa, gsl_vector *jd,
+	size_t i, size_t j, double value)
 {
-	size_t i, j, k;
+	double jd_i;
+	size_t x;
+
+	jd_i = gsl_vector_get(jd, i);
+	//debug("jd[%d] = %f\n", i, jd_i);
+	x = jd_i - i + j;
+	debug("set(%d,%d) = aa[%d] = %f\n", i, j, x, value);
+	gsl_vector_set(aa, x, value);
+}
+
+gsl_vector *skyline_st(gsl_vector *jd)
+{
+	gsl_vector *st;
+	size_t i;
+
+	if(!(st = gsl_vector_alloc(jd->size)))
+	{
+		perror("gsl_vector_alloc");
+		return NULL;
+	}
+	gsl_vector_set(st, 0, 0);
+	debug("st[%d] = %f\n", 0, 0);
+	for(i = 1; i < jd->size; i++)
+	{
+		double jd_i = gsl_vector_get(jd, i);
+		double jd_i_1 = gsl_vector_get(jd, i - 1);
+		double st_i = i - (jd_i - jd_i_1) + 1;
+		debug("st[%d] = %f\n", i, st_i);
+		gsl_vector_set(st, i, st_i);
+	}
+
+	return st;
+}
+
+void chol_sky(gsl_vector *aa, gsl_vector *jd, gsl_vector *st, size_t n)
+{
+	size_t i, j, k, j_init, j2_init;
 	double s, l_ii, l_ik, l_ij, l_jk, l_jj;
 	for(i = 0; i < n; i++)
 	{
 		debug("\ni = %d\n", i);
 		/* Calcular l_ij */
-
-		for(j = 0; j < i; j++)
+		j_init = gsl_vector_get(st, i);
+		for(j = j_init; j < i; j++)
 		{
-			l_ij = gsl_matrix_get(A, i, j);
+			debug("\n## %d,%d\n", i, j);
+
+			l_ij = skyline_get(aa, jd, i, j);
 			debug("1 Ai%dj%d = %f\n", i, j, l_ij);
-			for(k = 0; k < j; k++)
+			j2_init = gsl_vector_get(st, j);
+			for(k = max(j_init, j2_init); k < j; k++)
 			{
 				debug("1.1 - Li%dk%d * Lj%dk%d\n", i, k, j, k);
-				l_ik = gsl_matrix_get(L, i, k);
-				l_jk = gsl_matrix_get(L, j, k);
+				l_ik = skyline_get(aa, jd, i, k);
+				l_jk = skyline_get(aa, jd, j, k);
 				l_ij -= l_ik * l_jk;
 			}
-			l_jj = gsl_matrix_get(L, j, j);
+			l_jj = skyline_get(aa, jd, j, j);
 			debug("1 / Lj%dj%d = %f\n", j, j, l_jj);
 			l_ij /= l_jj;
 
 			/* XXX Set */
-			gsl_matrix_set(L, i, j, l_ij);
+			skyline_set(aa, jd, i, j, l_ij);
 			debug("1 Li%dj%d = %f\n", i, j, l_ij);
 		}
 
 		/* Calcular l_ii */
 
-		l_ii = gsl_matrix_get(A, i, i);
+		debug("\n## %d,%d\n", i, i);
+		l_ii = skyline_get(aa, jd, i, i);
 		debug("2 Ai%di%d = %f\n", i, i, l_ii);
-		for(k = 0; k < i; k++)
+		for(k = j_init; k < i; k++)
 		{
-			l_ik = gsl_matrix_get(L, i, k);
+			l_ik = skyline_get(aa, jd, i, k);
 			debug("2.1 - Li%dk%d^2 = %f^2\n", i, k, l_ik);
 			l_ii -= l_ik * l_ik;
 		}
@@ -62,19 +116,18 @@ void chol_sky(gsl_vector *aa, gsl_vector *jd, size_t n)
 		debug("2 Li%di%d = %f\n", i, i, l_ii);
 
 		/* XXX Set */
-		gsl_matrix_set(L, i, i, l_ii);
+		skyline_set(aa, jd, i, i, l_ii);
 	}
 
-	if(A != L)
+	/*
+	for(i = 0; i < n; i++)
 	{
-		for(i = 0; i < n; i++)
+		for(j = i+1; j < n; j++)
 		{
-			for(j = i+1; j < n; j++)
-			{
-				gsl_matrix_set(L, i, j, 0.0);
-			}
+			skyline_set(aa, jd, i, j, 0.0);
 		}
 	}
+	*/
 }
 
 int main(int argc, char *argv[])
@@ -87,17 +140,39 @@ int main(int argc, char *argv[])
 		 0, 0, 0, 5, 0,
 		 0, 1, 0, 0, 8
 	};
+	/* Comprobar con octave:
+
+		chol([ 3 0 -1 0 0; 0 1 0 0 1; -1 0 3 0 0; 0 0 0 5 0; 0 1 0 0 8 ])'
+	*/
 
 	double aa_data[] = { 3, 1, -1, 0, 3, 5, 1, 0, 0, 8 };
 	double jd_data[] = { 0, 1, 4, 5, 9 };
 	int N = 5;
+	size_t i, j;
 
 	gsl_vector_view aa_v, jd_v;
+	gsl_vector *aa, *jd;
 
 	aa_v = gsl_vector_view_array(aa_data, ARRAY_SIZE(aa_data));
 	jd_v = gsl_vector_view_array(jd_data, ARRAY_SIZE(jd_data));
 
-	chol_sky(&aa_v.vector, &jd_v.vector, N);
+	aa = &aa_v.vector;
+	jd = &jd_v.vector;
+
+	gsl_vector *st = skyline_st(jd);
+	/*
+	skyline_get(aa, jd, 0, 0);
+	skyline_set(aa, jd, 0, 0, 2);
+	skyline_get(aa, jd, 0, 0);
+	*/
+	chol_sky(aa, jd, st, N);
+
+	printf("aa = ");
+	for(i=0; i<aa->size; i++)
+	{
+		printf("% 5f,", gsl_vector_get(aa, i));
+	}
+	printf("\n");
 
 	return 0;
 }
