@@ -30,7 +30,7 @@ struct crs_system
 	double *b;
 };
 
-void gs(struct crs_system *s, double *x2)
+void gs(struct crs_system *s)
 {
 	struct crs_matrix *A = s->A;
 	double *x = s->x;
@@ -38,6 +38,7 @@ void gs(struct crs_system *s, double *x2)
 	double d_max = 0.0;
 	double x_1_max = 0.0;
 	double er;
+	double x_prev;
 
 	size_t i, j, k, jr_i, jr_i_1;
 	double a_ii, x_i, l_ij, l_jk, l_jj;
@@ -45,6 +46,7 @@ void gs(struct crs_system *s, double *x2)
 	{
 		d_max = 0.0;
 		x_1_max = 0.0;
+		x_prev = 0.0;
 
 		for(i = 0; i < A->n; i++)
 		{
@@ -53,7 +55,7 @@ void gs(struct crs_system *s, double *x2)
 			jr_i_1 = A->jr[i+1];
 			debug("jr[%d] = %d | jr[%d] = %d\n", i, jr_i, i+1, jr_i_1);
 
-			x2[i] = x[i];
+			x_prev = x[i];
 
 			x[i] = b[i];
 
@@ -74,7 +76,14 @@ void gs(struct crs_system *s, double *x2)
 				x[i] -= A->aa[j] * x[A->jad[j]];
 			}
 			x[i] /= A->aa[A->dia[i]];
+
+			if(d_max < fabs(x[i] - x_prev))
+				d_max = fabs(x[i] - x_prev);
+			if(x_1_max < fabs(x[i]))
+				x_1_max = fabs(x[i]);
+			printf("%.3f ", x[i]);
 		}
+		/*
 		for(i = 0; i < A->n; i++)
 		{
 			if(d_max < fabs(x[i] - x2[i]))
@@ -82,7 +91,7 @@ void gs(struct crs_system *s, double *x2)
 			if(x_1_max < fabs(x[i]))
 				x_1_max = fabs(x[i]);
 			printf("%.3f ", x[i]);
-		}
+		}*/
 		er = d_max / x_1_max;
 		printf("| err = %.9f\n", er);
 
@@ -119,7 +128,6 @@ int main(int argc, char *argv[])
 	size_t  jr[] = { 0, 4, 8, 12, 16 };
 	double   b[] = { 3,15,27,-9 };
 	double   x[] = { 0, 0, 0, 0 };
-	double  x2[] = { 0, 0, 0, 0 };
 
 	struct crs_matrix A;
 	A.aa = aa;
@@ -135,6 +143,6 @@ int main(int argc, char *argv[])
 	s.b = b;
 	s.x = x;
 	
-	gs(&s, x2);
+	gs(&s);
 	return 0;
 }
