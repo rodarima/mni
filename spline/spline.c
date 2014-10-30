@@ -71,7 +71,8 @@ void spline(struct spline_t *s)
 double fun(double x)
 {
 	//return sqrt(x);
-	return sin(x) * sin(x) * cos(x);
+	//return sin(x) * sin(x) * cos(x);
+	return pow(x, 3)/1000;
 }
 
 void test()
@@ -100,8 +101,8 @@ void test()
 		s.x[i] = (double) i;
 		s.a[i] = fun((double) i);
 	}
-	s.pn = 0;
-	s.p0 = 1;
+	s.pn = .3;
+	s.p0 = 0;
 
 	spline(&s);
 
