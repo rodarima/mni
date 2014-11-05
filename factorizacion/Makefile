@@ -1,12 +1,15 @@
 LDLIBS=-lgsl -lgslcblas -lm
 CFLAGS=-g
 
-lu:	lu.c dbg.h
+lu: lu.c dbg.h
 
-chol:	chol.c dbg.h
+chol: chol.c dbg.h
 
-chol_sky:	chol_sky.c dbg.h
+chol_sky: chol_sky.c dbg.h
 
-gauss_seidel:	gauss_seidel.c dbg.h
+gauss_seidel: gauss_seidel.c dbg.h
 
-potencia_iterada:	potencia_iterada.c dbg.h
+potencia_iterada: potencia_iterada.c dbg.h
+
+clean:
+	rm -rf *.o lu chol chol_sky gauss_seidel potencia_iterada

@@ -99,7 +99,6 @@ void pi(struct crs_matrix *A, double *q0, double *x)
 
 int main(int argc, char *argv[])
 {
-/*
 	double  aa[] = { 10,  0,  4,
 	                 -9,  2,  2,
 			  1, -1,  2 };
@@ -112,7 +111,8 @@ int main(int argc, char *argv[])
 	size_t  jr[] = { 0, 3, 6, 9 };
 	double  q0[] = { 1, 1, 1 };
 	double   x[] = { 0, 0, 0 };
-*/
+
+/*
 	double  aa[] = { -4, 14,  0,
 	                 -5, 13,  0,
 			 -1,  0,  2 };
@@ -125,7 +125,7 @@ int main(int argc, char *argv[])
 	size_t  jr[] = { 0, 3, 6, 9 };
 	double  q0[] = { 1, 1, 1 };
 	double   x[] = { 0, 0, 0 };
-
+*/
 	struct crs_matrix A;
 	A.aa = aa;
 	A.saa = ARRAY_SIZE(aa);
