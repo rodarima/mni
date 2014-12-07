@@ -36,6 +36,10 @@ def frontera(x, y, t):
 #    if(x==0.0): return 1.0
     return 0.0
 
+def flujo(x, y, t):
+    if(t > tfin/4.0): return -1.0
+    return 0.0
+
 def inicial (x,y):
 #    return x * y * (1.0 - x) * (1.0 - y) * 16
 #    if(x<0.1): return 1.0
@@ -51,9 +55,11 @@ def f(x,y,t):
 # Matriz de coeficientes de la solución inicial. U0
 S = np.zeros(nodos, 'f')
 
-cx2 = 1./incx**2.
-cy2 = 1./incy**2.
-cuk = 1./inct + 2.*cx2 + 2.*cy2
+#a = 0.993
+a = 1.0
+cx2 = a/incx**2.
+cy2 = a/incy**2.
+cuk = 1./inct + 2.*a*cx2 + 2.*a*cy2
 
 U = np.zeros([nodos, nodos], 'f')
 B = np.zeros(nodos, 'f')
@@ -73,7 +79,7 @@ for it in np.arange(nt):
     for i in np.arange(1,n+1):
         for j in np.arange(1,m+1):
 
-            k = i*(n+2) + j
+            k = j*(n+2) + i
 
             B[k] = 1.0/inct * S[k] + f(x[i], x[j], t)
             U[k,k] = cuk
@@ -98,11 +104,12 @@ for it in np.arange(nt):
         k = j * (n+2) + i
         U[k,k] = 1.0
         B[k] = frontera(x[i], y[j], t)
-
+        #Frontera con flujo
         i = n+1
         k = j * (n+2) + i
-        U[k,k] = 1.0
-        B[k] = frontera(x[i], y[j], t)
+        U[k,k] = 1.0 / incx
+        U[k,k-1] = -1.0 / incx
+        B[k] = flujo(x[i], y[j], t)
     
     S = np.linalg.solve(U,B)
     S = np.array(S)
@@ -120,7 +127,9 @@ g.scale(.1,.1,.1)
 g.setDepthValue(10)
 w.addItem(g)
 #gls = gl.GLSurfacePlotItem(x=x, y=y, z=Z[0], shader='heightColor')
-gls = gl.GLSurfacePlotItem(x=x, y=y, z=Z[0], shader='shaded')
+#gls.shader()['colorMap'] = np.array([0.2, 2, 0.5, 0.2, 1, 1, 0.2, 0, 2])
+gls = gl.GLSurfacePlotItem(x=x, y=y, z=Z[0], shader='shaded', 
+        glOptions='opaque')
 gls.scale(1,1,1)
 gls.translate(-.5, -.5, 0.)
 w.addItem(gls)
